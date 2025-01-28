@@ -5,7 +5,7 @@ class LSB_LZWBitPacker:
 	var bit_index: int = 0
 	var byte: int = 0
 
-	var chunks: PoolByteArray = PoolByteArray([])
+	var chunks := PackedByteArray()
 
 	func get_bit(value: int, index: int) -> int:
 		return (value >> index) & 1
@@ -27,7 +27,7 @@ class LSB_LZWBitPacker:
 			if bit_index == 8:
 				self.put_byte()
 
-	func pack() -> PoolByteArray:
+	func pack() -> PackedByteArray:
 		if bit_index != 0:
 			self.put_byte()
 		return chunks
@@ -35,4 +35,4 @@ class LSB_LZWBitPacker:
 	func reset() -> void:
 		bit_index = 0
 		byte = 0
-		chunks = PoolByteArray([])
+		chunks = PackedByteArray()

@@ -1,21 +1,19 @@
 extends Node
 
 
-var lsbbitpacker = preload('./lsbbitpacker.gd')
-var lsbbitunpacker = preload('./lsbbitunpacker.gd')
+var lsbbitpacker := preload('./lsbbitpacker.gd')
+var lsbbitunpacker := preload('./lsbbitunpacker.gd')
 
 class CodeEntry:
-	var sequence: PoolByteArray
-	var raw_array: Array
+	var sequence: PackedByteArray
 
-	func _init(_sequence):
-		raw_array = _sequence
+	func _init(_sequence: PackedByteArray) -> void:
 		sequence = _sequence
 
-	func add(other):
-		return CodeEntry.new(self.raw_array + other.raw_array)
+	func add(other: CodeEntry) -> CodeEntry:
+		return CodeEntry.new(self.sequence + other.sequence)
 
-	func to_string():
+	func _to_string() -> String:
 		var result: String = ''
 		for element in self.sequence:
 			result += str(element) + ', '
@@ -28,23 +26,23 @@ class CodeTable:
 
 	func add(entry) -> int:
 		self.entries[self.counter] = entry
-		self.lookup[entry.raw_array] = self.counter
+		self.lookup[entry.sequence] = self.counter
 		counter += 1
 		return counter
 
 	func find(entry) -> int:
-		return self.lookup.get(entry.raw_array, -1)
+		return self.lookup.get(entry.sequence, -1)
 
 	func has(entry) -> bool:
 		return self.find(entry) != -1
 
-	func get(index) -> CodeEntry:
+	func get_entry(index) -> CodeEntry:
 		return self.entries.get(index, null)
 
-	func to_string() -> String:
+	func _to_string() -> String:
 		var result: String = 'CodeTable:\n'
 		for id in self.entries:
-			result += str(id) + ': ' + self.entries[id].to_string() + '\n'
+			result += str(id) + ': ' + str(self.entries[id]) + '\n'
 		result += 'Counter: ' + str(self.counter) + '\n'
 		return result
 
@@ -54,23 +52,23 @@ func log2(value: float) -> float:
 func get_bits_number_for(value: int) -> int:
 	if value == 0:
 		return 1
-	return int(ceil(log2(value + 1)))
+	return ceil(log2(value + 1))
 
-func initialize_color_code_table(colors: PoolByteArray) -> CodeTable:
+func initialize_color_code_table(colors: PackedByteArray) -> CodeTable:
 	var result_code_table: CodeTable = CodeTable.new()
 	for color_id in colors:
 		# warning-ignore:return_value_discarded
 		result_code_table.add(CodeEntry.new([color_id]))
 	# move counter to the first available compression code index
 	var last_color_index: int = colors.size() - 1
-	var clear_code_index: int = pow(2, get_bits_number_for(last_color_index))
+	var clear_code_index := int(pow(2, get_bits_number_for(last_color_index)))
 	result_code_table.counter = clear_code_index + 2
 	return result_code_table
 
 # compression and decompression done with source:
 # http://www.matthewflickinger.com/lab/whatsinagif/lzw_image_data.asp
 
-func compress_lzw(image: PoolByteArray, colors: PoolByteArray) -> Array:
+func compress_lzw(image: PackedByteArray, colors: PackedByteArray) -> Array:
 	# Initialize code table
 	var code_table: CodeTable = initialize_color_code_table(colors)
 	# Clear Code index is 2**<code size>
@@ -80,8 +78,8 @@ func compress_lzw(image: PoolByteArray, colors: PoolByteArray) -> Array:
 	# Number 15 is in binary 0b1111, so we'll need 4 bits to write all
 	# colors down.
 	var last_color_index: int = colors.size() - 1
-	var clear_code_index: int = pow(2, get_bits_number_for(last_color_index))
-	var index_stream: PoolByteArray = image
+	var clear_code_index := int(pow(2, get_bits_number_for(last_color_index)))
+	var index_stream: PackedByteArray = image
 	var current_code_size: int = get_bits_number_for(clear_code_index)
 	var binary_code_stream = lsbbitpacker.LSB_LZWBitPacker.new()
 
@@ -140,23 +138,23 @@ func compress_lzw(image: PoolByteArray, colors: PoolByteArray) -> Array:
 
 	return [binary_code_stream.pack(), min_code_size]
 
-func decompress_lzw(code_stream_data: PoolByteArray, min_code_size: int, colors: PoolByteArray) -> PoolByteArray:
+func decompress_lzw(code_stream_data: PackedByteArray, min_code_size: int, colors: PackedByteArray) -> PackedByteArray:
 	var code_table: CodeTable = initialize_color_code_table(colors)
-	var index_stream: PoolByteArray = PoolByteArray([])
-	var binary_code_stream = lsbbitunpacker.LSB_LZWBitUnpacker.new(code_stream_data)
+	var index_stream := PackedByteArray()
+	var binary_code_stream := lsbbitunpacker.LSB_LZWBitUnpacker.new(code_stream_data)
 	var current_code_size: int = min_code_size + 1
-	var clear_code_index: int = pow(2, min_code_size)
+	var clear_code_index := int(pow(2, min_code_size))
 
 	# CODE is an index of code table, {CODE} is sequence inside
 	# code table with index CODE. The same goes for PREVCODE.
 
 	# Remove first Clear Code from stream. We don't need it.
-	binary_code_stream.remove_bits(current_code_size)
+	binary_code_stream.skip_bits(current_code_size)
 
 	# let CODE be the first code in the code stream
 	var code: int = binary_code_stream.read_bits(current_code_size)
 	# output {CODE} to index stream
-	index_stream.append_array(code_table.get(code).sequence)
+	index_stream.append_array(code_table.get_entry(code).sequence)
 	# set PREVCODE = CODE
 	var prevcode: int = code
 	# <LOOP POINT>
@@ -171,7 +169,7 @@ func decompress_lzw(code_stream_data: PoolByteArray, min_code_size: int, colors:
 		elif code == clear_code_index + 1: # Stop when detected EOI Code.
 			break
 		# is CODE in the code table?
-		var code_entry: CodeEntry = code_table.get(code)
+		var code_entry: CodeEntry = code_table.get_entry(code)
 		if code_entry != null: # if YES
 			# output {CODE} to index stream
 			index_stream.append_array(code_entry.sequence)
@@ -179,12 +177,12 @@ func decompress_lzw(code_stream_data: PoolByteArray, min_code_size: int, colors:
 			var K: CodeEntry = CodeEntry.new([code_entry.sequence[0]])
 			# warning-ignore:return_value_discarded
 			# add {PREVCODE} + K to the code table
-			code_table.add(code_table.get(prevcode).add(K))
+			code_table.add(code_table.get_entry(prevcode).add(K))
 			# set PREVCODE = CODE
 			prevcode = code
 		else: # if NO
 			# let K be the first index of {PREVCODE}
-			var prevcode_entry: CodeEntry = code_table.get(prevcode)
+			var prevcode_entry: CodeEntry = code_table.get_entry(prevcode)
 			var K: CodeEntry = CodeEntry.new([prevcode_entry.sequence[0]])
 			# output {PREVCODE} + K to index stream
 			index_stream.append_array(prevcode_entry.add(K).sequence)
