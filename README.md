@@ -1,22 +1,21 @@
-# godot-gif-lzw
+# Godot GIF LZW
 GIF's LZW compression/decompression done in Godot. Whole code is based on GIF specification and [this website](http://www.matthewflickinger.com/lab/whatsinagif/bits_and_bytes.asp).
 
-# Usage
-Firstly, use code from realese only. Secondly, you should have put "gif-lzw" directory somewhere in your project modules directory and preload "lzw.gd" file. Here is how to do it:
+## Installation and Usage
+Add this repository as a submodule via `git submodule add http://DavidLokison/godot-gif-lzw gif-lzw`. Make sure to `git submodule update --init --recursive` afterwards.
+
+Then, load and instanciate the script and use it as follows:
 
 ### Compression
-If you want to compress image, use `compress_lzw(image: PoolByteArray, colors: PoolByteArray) -> Array`.
+If you want to compress an image, use `compress_lzw(image: PackedByteArray, colors: PackedByteArray) -> Array`.
 
 ```gdscript
 extends Node2D
 
-
-var lzw_module = load("res://gif-lzw/lzw.gd")
-var lzw = lzw_module.new()
-
+var lzw := preload("res://gif-lzw/lzw.gd").new()
 
 func _ready():
-    var image: PoolByteArray = [
+    var image: PackedByteArray = [
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
@@ -29,27 +28,23 @@ func _ready():
         2, 2, 2, 2, 2, 1, 1, 1, 1, 1,
     ]
 
-    var color_table: PoolByteArray = PoolByteArray([0, 1, 2, 3])
+    var color_table := PackedByteArray([0, 1, 2, 3])
 
     var compressed_res: Array = lzw.compress_lzw(image, color_table)
-    var compressed_data: PoolByteArray = compressed_res[0]
+    var compressed_data: PackedByteArray = compressed_res[0]
     var min_code_size: int = compressed_res[1]
-
 ```
 
 ### Decompression
-If you want to decompress image, use `decompress_lzw(code_stream_data: PoolByteArray, min_code_size: int, colors: PoolByteArray) -> PoolByteArray`.
+If you want to decompress an image, use `decompress_lzw(code_stream_data: PackedByteArray, min_code_size: int, colors: PackedByteArray) -> PackedByteArray`.
 
 ```gdscript
 extends Node2D
 
-
-var lzw_module = load("res://gif-lzw/lzw.gd")
-var lzw = lzw_module.new()
-
+var lzw := preload("res://gif-lzw/lzw.gd").new()
 
 func _ready():
-    var image: PoolByteArray = [
+    var image: PackedByteArray = [
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
@@ -62,21 +57,17 @@ func _ready():
         2, 2, 2, 2, 2, 1, 1, 1, 1, 1,
     ]
 
-    var color_table: PoolByteArray = PoolByteArray([0, 1, 2, 3])
+    var color_table := PackedByteArray([0, 1, 2, 3])
 
     var compressed_res: Array = lzw.compress_lzw(image, color_table)
-    var compressed_data: PoolByteArray = compressed_res[0]
+    var compressed_data: PackedByteArray = compressed_res[0]
     var min_code_size: int = compressed_res[1]
 
-    var decompressed_index_stream: Array = lzw.decompress_lzw(
+    var decompressed_index_stream: PackedByteArray = lzw.decompress_lzw(
             compressed_data,
             min_code_size,
             color_table)
-
 ```
 
-# Usefull docs
-- [GIF specification](https://www.w3.org/Graphics/GIF/spec-gif89a.txt)
-- [GIF format implementation tutorial](http://www.matthewflickinger.com/lab/whatsinagif/bits_and_bytes.asp) (Special thanks to author of this website. I would propably not implement GIF's compression without help of this website.)
-- http://www0.cs.ucl.ac.uk/teaching/GZ05/07-images.pdf
-- [GIF's LZW compression topic on Wikipedia](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Welch)
+## Credits
+Credits for the original algorithm all goes to jegor377 in his [original repository](https://github.com/jegor377/godot-gif-lzw). This repository merely updates to Godot 4.3 stable and refactors to be used as a submodule.
